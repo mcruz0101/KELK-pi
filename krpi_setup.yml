@@ -73,6 +73,7 @@
           #!/bin/sh
 
           sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan1:name={{ sensor_name }}_wlan1,metagps={{ sensor_name }} &
+          sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan2:name={{ sensor_name }}_wlan2,metagps={{ sensor_name }} &     
         mode: '0755'
 
     - name: Add enable_gps.py script to crontab
