@@ -153,6 +153,19 @@
   become: yes
   tasks:
     - name: Reboot the system
-      ansible.builtin.reboot:   
-        connect_timeout: 300
-        reboot_timeout: 600
+      ansible.builtin.reboot:
+        connect_timeout: 30
+        reboot_timeout: 300
+
+    - name: Check cgps output for latitude and longitude
+      ansible.builtin.shell: "timeout 10 cgps -s"
+      register: cgps_output
+      ignore_errors: yes
+
+    - name: Assert that cgps output contains latitude and longitude
+      ansible.builtin.assert:
+        that:
+          - "'Latitude' in cgps_output.stdout"
+          - "'Longitude' in cgps_output.stdout"
+        success_msg: "Latitude and Longitude found in cgps output"
+        fail_msg: "Latitude and Longitude not found in cgps output"
