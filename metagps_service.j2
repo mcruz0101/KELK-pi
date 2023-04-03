@@ -1,0 +1,13 @@
+[Unit]
+Description=A command to run metagps for kismet
+After=syslog.target network.target
+
+[Service]
+WorkingDirectory=/home/kpi/python-kismet-metagpsd/
+ExecStart=/usr/bin/python3 metagpsd.py --connect {{ metagps_connect }} --metagps {{ sensor_name }} --apikey {{ api_key }}
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

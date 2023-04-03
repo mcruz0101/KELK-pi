@@ -1,0 +1,158 @@
+---
+- name: Kismet Pi Setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: Purge old Kismet packages
+      ansible.builtin.apt:
+        name: kismet
+        state: absent
+        purge: yes
+
+    - name: Update and upgrade packages
+      ansible.builtin.apt:
+        upgrade: yes
+        update_cache: yes
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        pkg:
+          - curl
+          - wget
+          - gnupg2
+          - gpsd
+          - gpsd-clients
+          - sqlite3
+          - python3-serial
+          - git
+          - python3-pip
+        state: present
+
+    - name: Import Kismet GPG key
+      ansible.builtin.shell:
+        cmd: "wget -O - https://www.kismetwireless.net/repos/kismet-release.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/kismet-archive-keyring.gpg"
+
+    - name: Add Kismet repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/bullseye bullseye main"
+        state: present
+
+    - name: Update apt cache and install Kismet
+      ansible.builtin.apt:
+        name: kismet
+        update_cache: yes
+        state: present
+
+    - name: Clone python-kismet-metagpsd repository
+      ansible.builtin.git:
+        repo: https://github.com/hobobandy/python-kismet-metagpsd.git
+        dest: "/home/{{ ansible_user }}/python-kismet-metagpsd"
+        clone: yes
+        update: no
+
+    - name: Install requirements from python-kismet-metagpsd
+      ansible.builtin.pip:
+        requirements: "/home/{{ ansible_user }}/python-kismet-metagpsd/requirements.txt"
+
+    - name: Create enable_gps.py script
+      ansible.builtin.copy:
+        dest: /opt/enable_gps.py
+        content: |
+          #!/usr/bin/python3
+          from time import sleep
+          import serial
+          serw = serial.Serial("/dev/ttyUSB2", baudrate = 115200, timeout = 1,rtscts=True, dsrdtr=True)
+          serw.write("AT+QGPS=1\r".encode("utf-8"))
+          serw.close()
+        mode: '0755'
+
+    - name: Create multi-source.sh script
+      ansible.builtin.copy:
+        dest: /opt/multi-source.sh
+        content: |
+          #!/bin/sh
+
+          sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan1:name={{ sensor_name }}_wlan1,metagps={{ sensor_name }} &
+        mode: '0755'
+
+    - name: Add enable_gps.py script to crontab
+      ansible.builtin.cron:
+        name: "Enable GPS and start gpsd"
+        user: "{{ ansible_user }}"
+        special_time: reboot
+        job: "/opt/enable_gps.py && systemctl start gpsd"
+
+    - name: Configure gpsd
+      ansible.builtin.lineinfile:
+        path: /etc/default/gpsd
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
+        - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB1"' }
+
+    - name: Add Kismet capture scripts to crontab
+      ansible.builtin.cron:
+        name: "Start Kismet daemon and start Kismet Wifi Capture"
+        user: "{{ ansible_user }}"
+        special_time: reboot
+        job: "{{ item.job }}"
+      loop:
+        - { name: "Start Kismet daemon", job: "kismet --daemonize --silent" }
+        - { name: "Start Kismet WiFi capture", job: "/opt/multi-source.sh" }
+
+    - name: Modify kismet.conf
+      ansible.builtin.lineinfile:
+        path: /etc/kismet/kismet.conf
+        line: "source=wlan1"
+
+    - name: Create kismet directory and set permissions
+      ansible.builtin.file:
+        path: /home/{{ ansible_user }}/kismet
+        state: directory
+        mode: '0777'
+
+    - name: Modify kismet_logging.conf
+      ansible.builtin.lineinfile:
+        path: /etc/kismet/kismet_logging.conf
+        regexp: '^log_prefix='
+        line: "log_prefix=/home/{{ ansible_user }}/kismet/"
+        state: present
+
+    - name: Update log_types in kismet_logging.conf
+      ansible.builtin.lineinfile:
+        path: /etc/kismet/kismet_logging.conf
+        regexp: '^log_types='
+        line: "log_types=kismet,pcapng,pcappi"
+        state: present
+
+- name: Create, enable, and start metagpsd service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Copy metagpsd systemd service configuration
+      ansible.builtin.template:
+        src: metagps_service.j2
+        dest: /etc/systemd/system/metagpsd.service
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable and start metagpsd service
+      ansible.builtin.systemd:
+        name: metagpsd
+        enabled: yes
+        state: started
+
+- name: Reboot Raspberry Pi devices
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot the system
+      ansible.builtin.reboot:   
+        connect_timeout: 300
+        reboot_timeout: 600

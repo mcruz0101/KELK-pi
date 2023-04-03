@@ -1,0 +1,59 @@
+#!/bin/bash
+
+#### This script might be necessary to run on the EC25-A modem to enable ECM mode.####
+
+
+
+# Install minicom
+sudo apt install minicom -y
+
+# Create a temporary expect script to interact with the modem
+cat > ecm_mode_setup.expect << EOF
+#!/usr/bin/expect -f
+
+set timeout 60
+
+spawn minicom -D /dev/ttyUSB2 -b 115200
+
+expect ">"
+send "AT\r"
+expect "OK"
+
+send "AT+QCFG=\\\"usbnet\\\"\r"
+expect "+QCFG: \\\"usbnet\\\",0"
+
+send "AT+QCFG=\\\"usbnet\\\",1\r"
+expect "OK"
+
+send "AT+CFUN=1,1\r"
+expect "OK"
+sleep 5
+
+send "AT\r"
+expect "OK"
+
+send "AT+CGDCONT=1,\\\"IP\\\",\\\"wholesale\\\"\r"
+expect "OK"
+
+send "AT+CFUN=1,1\r"
+expect "OK"
+
+send "\x01"
+expect ">"
+send "Z"
+expect ">"
+send "X"
+expect "Do you want to leave? "
+send "\r"
+
+expect eof
+EOF
+
+# Make the expect script executable
+chmod +x ecm_mode_setup.expect
+
+# Run the expect script
+./ecm_mode_setup.expect
+
+# Cleanup
+rm ecm_mode_setup.expect
