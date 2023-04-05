@@ -7,7 +7,7 @@ LOCAL_PATH="/path/to/local/kismet/files"
 SSH_KEY="/path/to/ssh_private_key"
 
 # Check for internet connectivity
-if ping -c 1 8.8.8.8 &> /dev/null; then
+if ping -c 1 google.com &> /dev/null; then
   echo "Internet connection available, transferring Kismet files..."
   
   # Compress Kismet files into a single archive
