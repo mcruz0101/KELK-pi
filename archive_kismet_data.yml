@@ -1,20 +1,20 @@
 ---
 - name: Archive Kismet data and fetch it
   hosts: krpi_hosts
+  become: yes
   gather_facts: no
   tasks:
     - name: Create an archive of the Kismet data folder
       ansible.builtin.archive:
-        path: /path/to/kismet_data
+        path: "{{ kismet_data_path  }}"
         dest: /tmp/kismet_data.tar.gz
         format: gz
       register: archive_result
-      when: "'kismet_data' in hostvars[inventory_hostname]['ansible_mounts']|map(attribute='mount')|list"
 
     - name: Fetch the archive to local machine
       ansible.builtin.fetch:
         src: /tmp/kismet_data.tar.gz
-        dest: /local/path/to/store/archives/{{ inventory_hostname }}_kismet_data.tar.gz
+        dest: /home/kserver/remote_captures/{{ inventory_hostname }}_kismet_data.tar.gz
         flat: yes
       when: archive_result.changed
 
@@ -24,10 +24,15 @@
         state: absent
       when: archive_result.changed
 
+    - name: Find Kismet data folder names
+      ansible.builtin.find:
+        paths: "{{ kismet_data_path }}"
+        file_type: any
+      register: kismet_data_files
+
     - name: Delete Kismet data folder contents
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ item.path }}"
         state: absent
-      with_fileglob:
-        - "/path/to/kismet_data/*"
+      with_items: "{{ kismet_data_files.files }}"
       when: archive_result.changed
