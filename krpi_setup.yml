@@ -75,6 +75,48 @@
           sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan1:name={{ sensor_name }}_wlan1,metagps={{ sensor_name }} &
           sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan2:name={{ sensor_name }}_wlan2,metagps={{ sensor_name }} &     
         mode: '0755'
+    
+    - name: Create send_kismet_filese.sh script
+      ansible.builtin.copy:
+        dest: /opt/send_kismet_files.sh
+        content: |
+           #!/bin/sh
+
+           # Replace these variables with your values
+           REMOTE_SERVER="{{ kismet_connect }}"
+           REMOTE_PATH="/home/kserver/remote_captures"
+           LOCAL_PATH="/home/{{ ansible_user }}/kismet"
+           SSH_KEY="/home/{{ ansible_user }}/.ssh/kpi"
+
+           # Check for internet connectivity
+           if ping -c 1 google.com &> /dev/null; then
+             echo "Internet connection available, transferring Kismet files..."
+
+             # Compress Kismet files into single achive
+             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+             ARCHIVE_NAME="kismet_files_$TIMESTAMP.tar.gz"
+             tar -czvf"$ARCHIVE_NAME" -C "$LOCAL_PATH"
+
+             # Transfer the archive to the remote remote server
+             scp -i "${SSH_KEY}" "${ARCHIVE_NAME}" "${REMOTE_SERVER}:${REMOTE_PATH}/${ARCHIVE_NAME}"
+
+             # Remove the archive from the local system
+             if [ $? -eq 0 ]; then
+               echo "Transfer complete, removing local archive..."
+               rm "${ARCHIVE_NAME}"
+               sudo rm Kismet*
+             fi
+            else
+              echo "No internet connection available, skipping transfer..."
+            fi
+        mode: '0755'
+    
+    - name: Add send_kismet_files.sh to crontab
+      ansible.builtin.cron:
+        name: "Send Kismet files to server every hour and delete from PI"
+        user: "{{ ansible_user }}"
+        special_time: hourly
+        job: "/opt/send_kismet_files.sh"
 
     - name: Add enable_gps.py script to crontab
       ansible.builtin.cron:

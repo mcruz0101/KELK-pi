@@ -22,6 +22,7 @@ if ping -c 1 google.com &> /dev/null; then
   if [ $? -eq 0 ]; then
     echo "Transfer successful, removing local archive."
     rm "${ARCHIVE_NAME}"
+    sudo rm Kismet*
   else
     echo "Transfer failed."
   fi
