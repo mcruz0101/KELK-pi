@@ -31,8 +31,6 @@
       register: kismet_data_files
 
     - name: Delete Kismet data folder contents
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ kismet_data_files.files }}"
+      ansible.builtin.command:
+        cmd: "rm -rf {{ kismet_data_path }}/*"
       when: archive_result.changed
