@@ -1,6 +1,6 @@
 ---
 - name: Kismet Pi Setup
-  hosts: all
+  hosts: krpi_hosts
   become: yes
   tasks:
     - name: Purge old Kismet packages
@@ -125,7 +125,7 @@
         special_time: reboot
         job: "/opt/enable_gps.py && systemctl start gpsd"
 
-    - name: Configure gpsd
+    - name: Configure gpsd for cell_hat Pis
       ansible.builtin.lineinfile:
         path: /etc/default/gpsd
         regexp: "{{ item.regexp }}"
@@ -133,6 +133,17 @@
       loop:
         - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
         - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB1"' }
+      when: "'cell_hat_pis' in group_names"
+
+    - name: Configure gpsd for external puck
+      ansible.builtin.lineinfile:
+        path: /etc/default/gpsd
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        loop:
+          - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
+          - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB0"' }
+      when: "'external_puck_pis' in group_names"
 
     - name: Add Kismet capture scripts to crontab
       ansible.builtin.cron:
@@ -188,6 +199,12 @@
     - name: Enable and start metagpsd service
       ansible.builtin.systemd:
         name: metagpsd
+        enabled: yes
+        state: started
+    
+    - name: Enable and start Kismet service
+      ansible.builtin.systemd:
+        name: kismet
         enabled: yes
         state: started
 
