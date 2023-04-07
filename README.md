@@ -29,7 +29,7 @@ This Ansible project is designed to automate the setup and configuration of Kism
 
 ## Inventory
 
-\`\`\`
+```
 [cell_hat_pis]
 krpi02 ansible_host=192.168.191.233 sensor_name=Node-02
 krpi05 ansible_host=192.168.191.102 sensor_name=Node-05
@@ -48,7 +48,7 @@ kismet_connect=192.168.191.218:3501
 metagps_connect=192.168.191.218:2501
 api_key=KISMET_API_KEY
 kismet_data_path=/home/pi/kismet_data
-\`\`\`
+```
 
 ## Usage
 
@@ -56,9 +56,9 @@ kismet_data_path=/home/pi/kismet_data
 2. Ensure your Ansible control node has SSH access to the Raspberry Pi devices.
 3. Run the Ansible playbook:
    
-   \`\`\`
+   ```
    ansible-playbook krpi_setup.yml
-   \`\`\`
+   ```
 
 ## Notes
 
