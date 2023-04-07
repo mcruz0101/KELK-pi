@@ -64,7 +64,7 @@
           serw = serial.Serial("/dev/ttyUSB2", baudrate = 115200, timeout = 1,rtscts=True, dsrdtr=True)
           serw.write("AT+QGPS=1\r".encode("utf-8"))
           serw.close()
-        mode: '0755'
+        mode: "0755"
 
     - name: Create multi-source.sh script
       ansible.builtin.copy:
@@ -73,44 +73,44 @@
           #!/bin/sh
 
           sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan1:name={{ sensor_name }}_wlan1,metagps={{ sensor_name }} &
-          sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan2:name={{ sensor_name }}_wlan2,metagps={{ sensor_name }} &     
-        mode: '0755'
-    
+          sudo /usr/bin/kismet_cap_linux_wifi --connect={{ kismet_connect }} --tcp --source=wlan2:name={{ sensor_name }}_wlan2,metagps={{ sensor_name }} &
+        mode: "0755"
+
     - name: Create send_kismet_filese.sh script
       ansible.builtin.copy:
         dest: /opt/send_kismet_files.sh
         content: |
-           #!/bin/sh
+          #!/bin/sh
 
-           # Replace these variables with your values
-           REMOTE_SERVER="{{ kismet_connect }}"
-           REMOTE_PATH="/home/kserver/remote_captures"
-           LOCAL_PATH="/home/{{ ansible_user }}/kismet"
-           SSH_KEY="/home/{{ ansible_user }}/.ssh/kpi"
+          # Replace these variables with your values
+          REMOTE_SERVER="{{ kismet_connect }}"
+          REMOTE_PATH="/home/kserver/remote_captures"
+          LOCAL_PATH="/home/{{ ansible_user }}/kismet"
+          SSH_KEY="/home/{{ ansible_user }}/.ssh/kpi"
 
-           # Check for internet connectivity
-           if ping -c 1 google.com &> /dev/null; then
-             echo "Internet connection available, transferring Kismet files..."
+          # Check for internet connectivity
+          if ping -c 1 google.com &> /dev/null; then
+            echo "Internet connection available, transferring Kismet files..."
 
-             # Compress Kismet files into single achive
-             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-             ARCHIVE_NAME="kismet_files_$TIMESTAMP.tar.gz"
-             tar -czvf"$ARCHIVE_NAME" -C "$LOCAL_PATH"
+            # Compress Kismet files into single achive
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            ARCHIVE_NAME="kismet_files_$TIMESTAMP.tar.gz"
+            tar -czvf"$ARCHIVE_NAME" -C "$LOCAL_PATH"
 
-             # Transfer the archive to the remote remote server
-             scp -i "${SSH_KEY}" "${ARCHIVE_NAME}" "${REMOTE_SERVER}:${REMOTE_PATH}/${ARCHIVE_NAME}"
+            # Transfer the archive to the remote remote server
+            scp -i "${SSH_KEY}" "${ARCHIVE_NAME}" "${REMOTE_SERVER}:${REMOTE_PATH}/${ARCHIVE_NAME}"
 
-             # Remove the archive from the local system
-             if [ $? -eq 0 ]; then
-               echo "Transfer complete, removing local archive..."
-               rm "${ARCHIVE_NAME}"
-               sudo rm Kismet*
-             fi
-            else
-              echo "No internet connection available, skipping transfer..."
+            # Remove the archive from the local system
+            if [ $? -eq 0 ]; then
+              echo "Transfer complete, removing local archive..."
+              rm "${ARCHIVE_NAME}"
+              sudo rm Kismet*
             fi
-        mode: '0755'
-    
+           else
+             echo "No internet connection available, skipping transfer..."
+           fi
+        mode: "0755"
+
     - name: Add send_kismet_files.sh to crontab
       ansible.builtin.cron:
         name: "Send Kismet files to server every hour and delete from PI"
@@ -130,20 +130,20 @@
         path: /etc/default/gpsd
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
+      when: "'cell_hat_pis' in group_names"
       loop:
         - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
         - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB1"' }
-      when: "'cell_hat_pis' in group_names"
 
     - name: Configure gpsd for external puck
       ansible.builtin.lineinfile:
         path: /etc/default/gpsd
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
-        loop:
-          - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
-          - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB0"' }
       when: "'external_puck_pis' in group_names"
+      loop:
+        - { regexp: '^START_DAEMON="false"', line: 'START_DAEMON="true"' }
+        - { regexp: '^DEVICES=""', line: 'DEVICES="/dev/ttyUSB0"' }
 
     - name: Add Kismet capture scripts to crontab
       ansible.builtin.cron:
@@ -164,19 +164,19 @@
       ansible.builtin.file:
         path: /home/{{ ansible_user }}/kismet
         state: directory
-        mode: '0777'
+        mode: "0777"
 
     - name: Modify kismet_logging.conf
       ansible.builtin.lineinfile:
         path: /etc/kismet/kismet_logging.conf
-        regexp: '^log_prefix='
+        regexp: "^log_prefix="
         line: "log_prefix=/home/{{ ansible_user }}/kismet/"
         state: present
 
     - name: Update log_types in kismet_logging.conf
       ansible.builtin.lineinfile:
         path: /etc/kismet/kismet_logging.conf
-        regexp: '^log_types='
+        regexp: "^log_types="
         line: "log_types=kismet,pcapng,pcappi"
         state: present
 
@@ -201,7 +201,7 @@
         name: metagpsd
         enabled: yes
         state: started
-    
+
     - name: Enable and start Kismet service
       ansible.builtin.systemd:
         name: kismet
