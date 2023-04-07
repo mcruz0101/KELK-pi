@@ -110,7 +110,7 @@
         special_time: reboot
         job: "{{ item.job }}"
       loop:
-        - { name: "Start Kismet daemon", job: "kismet --daemonize --silent" }
+        - { name: "Start Kismet daemon", job: "kismet --deamonize --silent" }
         - { name: "Start Kismet WiFi capture", job: "/opt/multi-source.sh" }
 
     - name: Modify kismet.conf
