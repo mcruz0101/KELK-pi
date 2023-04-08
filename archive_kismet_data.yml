@@ -30,7 +30,11 @@
         file_type: any
       register: kismet_data_files
 
-    - name: Delete Kismet data folder contents
+    - name: Get the latest file
+      set_fact:
+        latest_file: "{{ kismet_data_files.files | sort(attribute='mtime', reverse=True) | first }}"
+
+    - name: Delete Kismet data folder contents except the latest file
       ansible.builtin.shell:
-        cmd: "rm -rf {{ kismet_data_path }}/*"
+        cmd: "find {{ kismet_data_path }} -type f -not -name '{{ latest_file.path | basename }}' -exec rm -f {} \\;"
       when: archive_result.changed
