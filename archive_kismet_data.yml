@@ -4,6 +4,11 @@
   become: yes
   gather_facts: yes
   tasks:
+    - name: Stop Kismet
+      ansible.builtin.systemd:
+        name: kismet
+        state: stopped
+
     - name: Create an archive of the Kismet data folder
       ansible.builtin.archive:
         path: "{{ kismet_data_path }}"
@@ -38,3 +43,12 @@
       ansible.builtin.shell:
         cmd: "find {{ kismet_data_path }} -type f -not -name '{{ latest_file.path | basename }}' -exec rm -f {} \\;"
       when: archive_result.changed
+
+    - name: Start Kismet
+      ansible.builtin.systemd:
+        name: kismet
+        state: started
+    
+    - name: Start Kismet Wifi Capture
+      ansible.builtin.shell:
+        cmd: "/opt/multi-source.sh"      
