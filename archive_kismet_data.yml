@@ -6,7 +6,7 @@
   tasks:
     - name: Create an archive of the Kismet data folder
       ansible.builtin.archive:
-        path: "{{ kismet_data_path  }}"
+        path: "{{ kismet_data_path }}"
         dest: /tmp/kismet_data.tar.gz
         format: gz
       register: archive_result
