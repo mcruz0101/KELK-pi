@@ -45,9 +45,14 @@ external_puck_pis
 
 [krpi_hosts:vars]
 kismet_connect=192.168.191.218:3501
+
 metagps_connect=192.168.191.218:2501
+
 api_key=KISMET_API_KEY
-kismet_data_path=/home/pi/kismet_data
+
+kismet_user=Your Kismet User here
+
+kismet_data_path=/home/{{ kismet_user }}/kismet
 ```
 
 ## Usage
